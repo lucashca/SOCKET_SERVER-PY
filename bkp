@@ -1,0 +1,57 @@
+if data.decode() == "-list":
+        os.chdir(my_dir)
+        for file in glob.glob("*.*"):
+            size_file = os.path.getsize(file)
+            msg_send = file + "  "+str(size_file)+"\n"
+            print("",end=" ")
+            conexao.send(str.encode(msg_send))
+    elif data.decode() == "-list-cache":
+        if len(cache) != 0:
+            for key in cache.keys():
+                conexao.send(str.encode(key))
+        else:              
+            conexao.send(str.encode("Cache vazia!"))    
+    else:
+        file_search = data.decode()
+        if file_search in getCacheKey():  # Cache hit file is in the cache
+            obj = getCacheObj(file_search)
+            cacheFile = obj.file
+            size = obj.size
+            print("Cache hit, sending file")
+            try:
+                conexao.send(str.encode(str(size)))
+                for i in cacheFile:
+                    conexao.send(i)
+            except:
+                print("Erro ao estabelecer a comunicação com o cliente!")
+
+        else: # Cache miss, file is not in the cache
+            erro = 0
+            print("Cache miss, sending file")
+            try:
+                print(my_dir+file_search)
+                arq = open(my_dir+file_search, 'rb')
+                size = os.path.getsize(my_dir+file_search)
+            except:
+                print("O arquivo não foi encontrado");
+                conexao.send(str.encode(str("ERRO")))
+                erro = 1
+            if not erro:
+                try:
+                    conexao.send(str.encode(str(size)))
+                    linesArq = []
+                    if(size < 64000000):
+                        for i in arq.readlines():
+                            conexao.send(i)
+                            linesArq.append(i)
+                        putOnCache(file_search,linesArq,size)
+                    else:
+                        for i in arq.readlines():
+                            conexao.send(i)
+                except:
+                    print("Erro ao estabelecer a comunicação com o cliente!")
+                arq.close()
+    conexao.close()
+    print("\nConexão Finalizada")
+    print("Aguardando nova conexão")
+   
